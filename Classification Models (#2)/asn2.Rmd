@@ -1,0 +1,326 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+This question should be answered using the Weekly data set, which is part of the ISLR package. This data is similar in nature to the Smarket data from this chapter’s lab, except that it contains 1,089 weekly returns for 21 years, from the beginning of 1990 to the end of 2010.
+```{r}
+suppressMessages(library(ISLR)); data(Weekly)
+suppressMessages(library('topicmodels'))
+suppressMessages(library(MASS))
+new_Weekly <- Weekly
+summary(new_Weekly)
+```
+
+(a) Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+```{r}
+summary(new_Weekly)
+c <- plot(x=new_Weekly$Year, y=new_Weekly$Volume)
+c
+#new_Weekly$Direction <- unclass(Weekly$Direction)
+pairs(new_Weekly)
+```
+Observations:
+* Volume has increased significantly over the years, it seems like the strongest relationship between variables.
+* Today and direction seem to follow a so
+* There is no stand out relationship between lags and anything at all.
+
+(b) Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?
+```{r}
+convert_to_binomial <- function(x) {  
+    if (x == 'Up'){
+      return(1)
+    } else if (x == 'Down'){
+      return(0)
+    }
+}
+new_Weekly$Direction <- sapply(X=new_Weekly$Direction, FUN = convert_to_binomial)
+model_1b <- glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,family=binomial(link='logit'),data=new_Weekly)
+summary(model_1b)
+```
+
+Looks like the model is poor fit. Lag 2 seems to be the only close to significant predictor but thats not even with a 0.05 alpha level.
+
+
+(c) Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.
+```{r}
+#suppressMessages(install.packages("caret", dependencies = c("Depends", "Suggests")))
+library(caret)
+
+c_pre2 <- predict(model_1b, type="response")
+class_prediction <-
+  ifelse(c_pre2 > 0.50,
+         1,
+         0
+  )
+confusionMatrix(data=factor(class_prediction),reference=factor(new_Weekly$Direction))
+```
+This model seems very inclined to predict an upward movement.
+
+(d) Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010).
+```{r}
+q1d_train_slice <- subset(new_Weekly, Year>1989 & Year<2009)
+q1d_test_slice <- subset(new_Weekly, Year>2008)
+model_1d <- glm(Direction~Lag2,family=binomial(link='logit'),data=q1d_train_slice)
+
+c_pre3<-predict(model_1d, newdata=q1d_test_slice, type="response")
+class_prediction_3 <-
+  ifelse(c_pre3 > 0.50,
+         1,
+         0
+  )
+
+confusionMatrix(data=factor(class_prediction_3),reference=factor(q1d_test_slice$Direction))
+
+```
+
+(e) Repeat (d) using LDA.
+```{r}
+model_1e <- lda(Direction~Lag2,data=q1d_train_slice)
+
+c_pre_q1e<-predict(model_1e, newdata=q1d_test_slice)
+class_prediction_4 <-
+  ifelse(c_pre_q1e[["x"]] > 0.50,
+         1,
+         0
+  )
+
+confusionMatrix(data=c_pre_q1e$class,reference=factor(q1d_test_slice$Direction))
+```
+
+(f) Repeat (d) using QDA.
+```{r}
+model_1f <- qda(Direction~Lag2,data=q1d_train_slice)
+
+c_pre_q1f<-predict(model_1f, newdata=q1d_test_slice)
+
+
+confusionMatrix(data=c_pre_q1f$class,reference=factor(q1d_test_slice$Direction))
+```
+
+(g) Repeat (d) using KNN with K = 1.
+```{r}
+library(class)
+train.X <- matrix(q1d_train_slice$Lag2)
+test.X <- matrix(q1d_test_slice$Lag2)
+train.direction <- q1d_train_slice$Direction
+test.direction <- q1d_test_slice$Direction
+
+set.seed (1)
+knn.pred=knn(train=train.X,test=test.X,cl=train.direction ,k=1)
+confusionMatrix(data=knn.pred,reference=factor(q1d_test_slice$Direction))
+
+```
+
+(h) Which of these methods appears to provide the best results on this data?
+It seems like LDA and Logistic regression provide the exact same results with an accuracy of 62%. I would just one of these since they have the greatest accuracy of all the models.
+
+
+(i) Experiment with different combinations of predictors, including possible transformations and interactions, for each of the methods. Report the variables, method, and associated confusion matrix that appears to provide the best results on the held out data. Note that you should also experiment with values for K in the KNN classifier.
+
+
+Question #2
+=============================
+In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the `Auto` data set.
+
+(a) Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function. Note you may find it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables.
+```{r}
+auto <- data.frame(Auto)
+median.mpg <- median(auto$mpg)
+auto$mpg01 <-
+  ifelse(auto$mpg > median.mpg,
+         1,
+         0
+  )
+auto
+```
+
+
+(b) Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.
+```{r}
+library(corrplot)
+par(mfrow=c(2,2))
+plot(auto$mpg01, auto$horsepower)
+plot(auto$mpg01, auto$year)
+plot(auto$mpg01, auto$acceleration)
+plot(auto$mpg01, auto$origin)
+
+
+par(mfrow=c(1,1))
+auto.numeric <- auto[,sapply(auto, is.numeric)]
+M <- cor(x = as.matrix(auto.numeric))
+corrplot(M, method = "circle")
+```
+
+(c) Split the data into a training set and a test set.
+```{r}
+smp_size <- floor(0.75 * nrow(auto))
+set.seed(101)
+
+train_ind <- sample(seq_len(nrow(auto)), size = smp_size)
+
+train.auto <- auto[train_ind, ]
+test.auto <- auto[-train_ind, ]
+
+```
+
+(d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+model_2d <- lda(mpg01 ~ cylinders + weight + displacement + horsepower,data=train.auto)
+
+c_pre_2d<-predict(model_2d, newdata=test.auto)
+
+
+confusionMatrix(data=c_pre_2d$class,reference=factor(test.auto$mpg01))
+
+
+## Test Error Rate
+print('This is the test error rate of the LDA Model: ')
+mean(c_pre_2d$class != test.auto$mpg01)
+```
+
+(e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+model_2e <- qda(mpg01~origin+year+acceleration,data=train.auto)
+
+c_pre_2e<-predict(model_2e, newdata=test.auto)
+
+
+confusionMatrix(data=c_pre_2e$class,reference=factor(test.auto$mpg01))
+
+
+## Test Error Rate
+print('This is the test error rate of the QDA Model: ')
+mean(c_pre_2e$class != test.auto$mpg01)
+```
+
+(f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+model_2f <- glm(mpg01~origin+year+acceleration,data=train.auto,family=binomial(link='logit'))
+
+c_pre_2f<-predict(model_2f, newdata=test.auto, type="response")
+class_prediction_2f <-
+  ifelse(c_pre_2f > 0.50,
+         1,
+         0
+  )
+
+confusionMatrix(data=factor(class_prediction_2f),reference=factor(test.auto$mpg01))
+
+
+## Test Error Rate
+print('This is the test error rate of the Logistic Model: ')
+sum((factor(class_prediction_2f) == factor(test.auto$mpg01)), na.rm = TRUE) / length(c_pre_2d$class)
+
+
+```
+
+(g) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
+```{r}
+library(class)
+train.autoX <- (cbind(train.auto$origin, train.auto$year, train.auto$acceleration))
+test.autoX <- (cbind(test.auto$origin, test.auto$year, test.auto$acceleration))
+train.autoy <- train.auto$mpg01
+test.autoy <- test.auto$mpg01
+
+set.seed (1)
+knn.pred=knn(train=train.autoX,test=test.autoX,cl=train.autoy ,k=1)
+
+
+confusionMatrix(data=knn.pred,reference=factor(test.autoy))
+## Test Error Rate k = 1
+print('This is the test error rate of the KNN Model with k = 1: ')
+sum((knn.pred == factor(test.autoy)), na.rm = TRUE) / length(test.autoy)
+
+## Test Error Rate k = 2
+knn.pred=knn(train=train.autoX,test=test.autoX,cl=train.autoy ,k=2)
+print('This is the test error rate of the KNN Model with k = 2: ')
+sum((knn.pred == factor(test.autoy)), na.rm = TRUE) / length(test.autoy)
+
+## Test Error Rate k = 3
+knn.pred=knn(train=train.autoX,test=test.autoX,cl=train.autoy ,k=3)
+print('This is the test error rate of the KNN Model with k = 3: ')
+sum((knn.pred == factor(test.autoy)), na.rm = TRUE) / length(test.autoy)
+
+## Test Error Rate k = 4
+knn.pred=knn(train=train.autoX,test=test.autoX,cl=train.autoy ,k=4)
+print('This is the test error rate of the KNN Model with k = 4: ')
+sum((knn.pred == factor(test.autoy)), na.rm = TRUE) / length(test.autoy)
+
+print("Best performing K seems to be 2 and 3 at ~73% error rate.")
+knn.pred=knn(train=train.autoX,test=test.autoX,cl=train.autoy ,k=2)
+```
+
+
+
+Question #3
+====================
+Find a R package that can perform Naïve Bayesian analysis and use it to do Q1 (part d) and Q2 (part d).
+```{r}
+library(naivebayes)
+
+# Naive Bayes to do Question 2 part d
+model_3a <- naive_bayes(x = train.autoX, y = factor(train.autoy))
+
+c_pre_3a<-predict(model_3a, newdata=test.autoX, type = "class")
+
+
+confusionMatrix(data=c_pre_3a,reference=factor(test.autoy))
+
+
+## Test Error Rate
+print('This is the test error rate of the Naive Bayes Model: ')
+sum((c_pre_3a == factor(test.auto$mpg01)), na.rm = TRUE) / length(c_pre_3a)
+```
+
+```{r}
+# Naive Bayes to do Question 1 D
+train.X <- matrix(q1d_train_slice$Lag2)
+test.X <- matrix(q1d_test_slice$Lag2)
+train.direction <- q1d_train_slice$Direction
+test.direction <- q1d_test_slice$Direction
+
+
+
+model_3b <- naive_bayes(x = train.X, y = factor(train.direction))
+
+c_pre_3b<-predict(model_3b, test.X, type = "class")
+
+
+confusionMatrix(data=c_pre_3b,reference=factor(test.direction))
+
+
+## Test Error Rate
+print('This is the test error rate of the Naive Bayes Model: ')
+sum((c_pre_3b == factor(test.direction)), na.rm = TRUE) / length(c_pre_3b)
+
+
+```
+
+
+
+Question #4
+===================
+Find a R package that can generate ROC curve. Use it to compare different models (LDA, QDA, logistic regression, KNN, naïve Bayesian) in Q1, Q2 and Q3.
+```{r}
+library(ROCR)
+library(pROC)
+par(mfrow=c(2,3))
+plot(roc(test.autoy, as.numeric(c_pre_3a)),main = "Naive Bayes Model Q2")
+
+plot(roc(test.direction, as.numeric(c_pre_3b)),main = "Naive Bayes Model Q1")
+
+plot(roc(test.autoy, as.numeric(knn.pred)),main = "KNN (k=2) Model Q2")
+
+plot(roc(test.autoy, as.numeric(c_pre_2e$class)),main = "QDA Model Q2")
+
+plot(roc(new_Weekly$Direction, as.numeric(class_prediction)),main = "Logistic Model Q1")
+
+plot(roc(q1d_test_slice$Direction, as.numeric(c_pre_q1e$class)),main = "LDA Model Q1")
+```
+
+
+
+
+

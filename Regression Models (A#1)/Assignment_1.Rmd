@@ -1,0 +1,316 @@
+---
+title: 'STATS3850 - Assignment #1'
+output: pdf_document
+Author: "Hussien Hussien"
+---
+
+Question 1
+============
+2.3 Q9. This exercise involves the Auto data set studied in the lab. Make sure that the missing values have been removed from the data.
+```{r}
+library(ISLR)
+dim(Auto)
+summary(Auto)
+```
+(a) Which of the predictors are quantitative, and which are qualitative?
+**quantitative**: mpg, cylinders, displacement, horsepower, weight,
+# acceleration, year
+**qualitative**: name, origin
+
+(b) What is the range of each quantitative predictor? You can answer this using the range() function.
+```{r}
+sapply(Auto[, 1:7], range)
+```
+
+
+(c) What is the mean and standard deviation of each quantitative predictor?
+
+```{r}
+print("Means")
+sapply(Auto[, 1:7], mean)
+print("Standard Deviations")
+sapply(Auto[, 1:7], sd)
+```
+
+
+(d) Now remove the 10th through 85th observations. What is the range, mean, and standard deviation of each predictor in the subset of the data that remains?
+
+```{r}
+
+newAuto = Auto[-(10:85),]
+
+# stats
+sapply(newAuto[, 1:7], range)
+sapply(newAuto[, 1:7], mean)
+sapply(newAuto[, 1:7], sd)
+
+```
+
+
+(e) Using the full data set, investigate the predictors graphically, using scatterplots or other tools of your choice. Create some plots highlighting the relationships among the predictors. Comment on your findings.
+
+```{r}
+pairs(Auto)
+plot(Auto$mpg, Auto$weight)
+# The heavier the card the lower the mpg.
+plot(Auto$mpg, Auto$displacement)
+# Higher displacement, less Mpg.
+plot(Auto$year, Auto$horsepower)
+# It apears the newer cars have less horsepower than the older ones.
+
+```
+
+
+(f) Suppose that we wish to predict gas mileage (mpg) on the basis of the other variables. Do your plots suggest that any of the other variables might be useful in predicting mpg? Justify your answer.
+
+```{r}
+pairs(Auto)
+
+# It looks like weight, horsepower and displacement are clear indicators of MPG.
+```
+
+
+
+3.6 Q9. This question involves the use of multiple linear regression on the Auto data set.
+```{r}
+library(ISLR)
+summary(Auto)
+```
+
+(a) Produce a scatterplot matrix which includes all of the variables in the data set.
+```{r}
+pairs(Auto)
+```
+
+(b) Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the name variable, which is qualitative.
+```{r}
+cor(subset(Auto, select=-name))
+```
+
+(c) Use the lm() function to perform a multiple linear regression with mpg as the response and all other variables except name as the predictors. Use the summary() function to print the results. Comment on the output. For instance:
+i. Is there a relationship between the predictors and the re- sponse?
+Yes, there is clearly a relationship between these variables and the response. This is evident by the p-values being significant and the a handful of co-efficients not being ~ 0.
+ii. Which predictors appear to have a statistically significant relationship to the response?
+Displacement, weight, year, and origin. Judged by p-values of each predictors t-value.
+
+iii. What does the coefficient for the year variable suggest?
+It's `year's` co-efficient of 0.7508 seems to suggest that for ever year brings a increase 0.75 mpg increase.
+
+```{r}
+fit_1 = lm(mpg~.-name, data=Auto)
+summary(fit_1)
+```
+
+Answer:
+i. Is there a relationship between the predictors and the response?
+* Yes, there is a relatioship between the predictors and the response by testing the null hypothesis of whether all the regression coefficients are zero. The F -statistic is far from 1 (with a small p-value), indicating evidence against the null hypothesis.
+
+ii. Which predictors appear to have a statistically significant relationship to the response?
+* Looking at the p-values associated with each predictor’s t-statistic, we see that displacement, weight, year, and origin have a statistically significant relationship, while cylinders, horsepower, and acceleration do not.
+
+iii. What does the coefficient for the year variable suggest?
+* The regression coefficient for year, 0.7508, suggests that for every one year, mpg increases by the coefficient. In other words, cars become more fuel efficient every year by almost 1 mpg / year.
+
+
+(d) Use the plot() function to produce diagnostic plots of the linear regression fit. Comment on any problems you see with the fit. Do the residual plots suggest any unusually large outliers? Does the leverage plot identify any observations with unusually high leverage?
+```{r}
+plot(fit_1)
+#plot(predict(fit_1), rstudent(fit_1))
+
+# The residual plot shows that the model may not be a very good fit. Since it follows a curve and as opposed to a loose straight line around the 0. It especially crumbles towards the larger values.
+
+# Point 14 seems to have unusually high leverage
+```
+
+(e) Use the * and : symbols to fit linear regression models with interaction effects. Do any interactions appear to be statistically significant?
+I used the co-relation matix to find the most co-related variables. They tend to be the variables with interaction efects.
+```{r}
+fit_2 = lm(mpg~cylinders*displacement+displacement*weight, data=Auto)
+summary(fit_2)
+```
+
+(f) Try a few different transformations of the variables, such as log(X), root(X), X2. Comment on your findings.
+```{r}
+fit_3 = lm(log(mpg)~(weight^2)+log(horsepower)+sqrt(acceleration), data=Auto)
+summary(fit_3)
+plot(fit_3)
+# This set of transformations actually seems to help the model achieve a nearly straight residual curve
+```
+
+
+Question 2
+============
+In this exercise you will create some simulated data and will fit simple linear regression models to it. Make sure to use `set.seed(1)` prior to starting part (a) to ensure consistent results.
+
+```{r}
+set.seed(1)
+```
+(a) Using the `rnorm()` function, create a vector, `x`, containing 100 observations drawn from a N(0,1) distribution. This represents a feature, X.
+```{r}
+x <- rnorm(100)
+```
+
+(b) Using the `rnorm()` function, create a vector, eps, containing 100 observations drawn from a N(0,0.25) distribution i.e. a normal distribution with mean zero and variance 0.25.
+```{r}
+eps <- rnorm(100, 0, 0.25)
+```
+
+
+(c) Using `x` and `eps`, generate a vector y according to the model
+What is the length of the vector y? What are the values of B0 and B1 in this linear model?
+
+Clearly, B0 = -1 and B1 = 0.5
+```{r}
+y <- (0.5 * x) + eps - 1
+```
+
+
+(d) Create a scatterplot displaying the relationship between x and y. Comment on what you observe.
+```{r}
+plot(x,y)
+```
+
+
+
+(e) Fit a least squares linear model to predict y using x. Comment on the model obtained. How do Bˆ0 and Bˆ1 compare to B0 and B1?
+Bˆ0 = -1.00942 & Bˆ1 =0.49973, The estimates arequite close to the actual coefficients of the population model.
+```{r}
+fit_3 <- lm(y~x)
+summary(fit_3)
+```
+
+
+(f) Display the least squares line on the scatterplot obtained in (d). Draw the population regression line on the plot, in a different color. Use the legend() command to create an appropriate legend.
+```{r}
+plot(x,y,pch=16, xlab="X",ylab="Y",main="X vs. Y")
+abline(coefficients(fit_3), lwd=2, col=2,lty=1)
+abline(a=-1,b=0.5,col=3,lty=2)
+legend( x= "topleft",  
+        legend=c("Model","Regression line"), 
+        col=c(2, 3), lty=1)
+
+```
+
+(g) Now fit a polynomial regression model that predicts y using x and x2. Is there evidence that the quadratic term improves the model fit? Explain your answer.
+EDIT: There is evidence that model fit has increased over the training data given the slight increase in R2 and RSE. Although, the p-value of the t-statistic suggests that there isn’t a relationship between y and x2.
+```{r}
+model_squared_x = lm(y~x+I(x^2))
+summary(model_squared_x)
+```
+
+
+(h) Repeat (a)–(f) after modifying the data generation process in such a way that there is less noise in the data. The model (3.39) should remain the same. You can do this by decreasing the vari- ance of the normal distribution used to generate the error term  in (b). Describe your results.
+```{r}
+set.seed(1)
+eps_2 = rnorm(100, 0, 0.11)
+x1 = rnorm(100)
+y1 = -1 + 0.5*x1 + eps_2
+plot(x1, y1)
+fit_2h = lm(y1~x1)
+summary(fit_2h)
+abline(coefficients(fit_2h), lwd=2, col=2,lty=1)
+abline(a=-1,b=0.5,col=3,lty=2)
+legend( x= "topleft",  
+        legend=c("Model","Regression line"), 
+        col=c(2, 3), lty=1)
+```
+
+
+(i) Repeat (a)–(f) after modifying the data generation process in such a way that there is more noise in the data. The model (3.39) should remain the same. You can do this by increasing the variance of the normal distribution used to generate the error term  in (b). Describe your results.
+```{r}
+set.seed(1)
+eps_3 = rnorm(100, 0, 1)
+x1 = rnorm(100)
+y1 = -1 + 0.5*x1 + eps_3
+plot(x1, y1)
+fit_2i = lm(y1~x1)
+summary(fit_2i)
+abline(coefficients(fit_2i), lwd=2, col=2,lty=1)
+abline(a=-1,b=0.5,col=3,lty=2)
+legend( x= "topleft",  
+        legend=c("Model","Regression line"), 
+        col=c(2, 3), lty=1)
+```
+
+
+(j) What are the confidence intervals for B0 and B1 based on the original data set, the noisier data set, and the less noisy data set? Comment on your results.
+```{r}
+confint(fit_3)
+confint(fit_2h)
+confint(fit_2i)
+```
+
+
+
+Question 3
+============
+a)
+```{r}
+n=10;
+x<-rnorm(n);
+y<-4.20+6.9*x+rnorm(n,0,2.5)
+fit_1<-lm(y~x)
+print("Beta 0 & 1")
+summary(fit_1)$coefficients[1:2,1]
+```
+
+b)
+```{r}
+vcov(fit_1)
+```
+
+c)
+```{r}
+beta_0_list <- c(1:1000)
+beta_1_list <- c(1:1000)
+for (i in 1:1000){
+  n=10
+  x<-rnorm(n)
+  y<-4.20+6.9*x+rnorm(n,0,2.5)
+  fit_2<-lm(y~x)
+  beta_0_list[i] <- summary(fit_2)$coefficients[1,1]
+  beta_1_list[i] <- summary(fit_2)$coefficients[2,1]
+}
+print('Covariance')
+cov(beta_0_list, beta_1_list)
+
+```
+
+Question 4
+============
+```{r}
+# 1
+
+q_4_func <- function(n) {
+  x<-rnorm(n);
+  y<-4.20+6.9*x+rnorm(n,0,2.5)
+  fit_2<-lm(y~x)
+  t0 <- summary(fit_2)$coefficients[2,3]
+  return(t0)
+}
+
+t0 <- q_4_func(100)
+cat("The value of t0: ", t0)
+```
+
+
+```{r}
+# 2
+values = list()
+for (i in 1:1000) {
+  values[i] <- q_4_func(100)
+
+}
+count = 0
+for (k in values){
+  if(k > t0){
+    count = count + 1
+  }
+}
+portion <- count/1000
+cat("Portion of ti > t0: ", portion)
+
+```
+
+
+

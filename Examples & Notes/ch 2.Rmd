@@ -1,0 +1,149 @@
+---
+title: "Data Analysis"
+subtitle: "Chapter 2"
+author: "Jiandong Ren"
+date: "January 2020"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+In this class I will introduce some basic concepts related to data analysis/statistical learning.
+
+
+## An example
+
+```{r}
+require(ISLR)
+
+Advertising <- read.csv("datasets/Advertising.csv")
+
+View(Advertising)
+```
+Some commonly used R 
+```{r}
+?Advertising
+dim(Advertising)
+str(Advertising)
+summary(Advertising)
+```
+Some Graphs
+```{r}
+
+hist(Advertising$sales)
+plot(Advertising$TV, Advertising$sales)
+
+```
+
+## An example- simple linear model
+
+
+```{r}
+plot(Advertising$TV, Advertising$sales)
+
+fit1<-lm(sales~ TV, data=Advertising)
+abline(fit1)
+summary(fit1)
+library(ggplot2)
+library(knitr) 
+ kable(coef(summary(fit1)),  digits = c(4, 5, 2, 4))
+```
+## An example- simple linear model
+
+-use of qqplot
+```{r}
+library(ggplot2)
+library(ISLR)
+
+```
+ggplot(Advertising, aes(x=TV, y=Sales))+geom_point()+geom_smooth(method="lm", formula = y~ poly(x,7))
+
+
+## An example- polynomial regression model
+
+
+```{r}
+attach(Advertising)
+fit2<-lm(sales ~ poly(TV,4), data=Advertising)
+TV_lim=range(TV)
+TV_grid=seq(from=TV_lim[1], to= TV_lim[2])
+pred2<-predict(fit2,newdata=list(TV=TV_grid),se=TRUE)
+plot(TV, sales)
+abline(fit1)
+lines(TV_grid, pred2$fit,lwd=2,col="blue")
+```
+
+## An example- A more complicated model
+
+
+```{r}
+library(splines)
+fit3<-lm(Sales~ ns(TV, df=50), data=Advertising)
+pred3<-predict(fit3,newdata=list(TV=TV_grid),se=TRUE)
+
+plot(TV, Sales)
+abline(fit1)
+lines(TV_grid, pred2$fit,lwd=2,col="blue")
+lines(TV_grid, pred3$fit,lwd=2,col="red")
+```
+
+## Assessing models
+
+- Inference
+
+- Prediction
+
+- In this course, we concentrate more on predictions
+
+
+## Assessing model Accuracy
+
+- Model: $Y=f(X)+\epsilon$
+
+- Based on data, we get an approximation of $f$, call it $\hat{f}$
+
+- true status: $y_0=f(x_0)+\epsilon$
+
+- Prediction $\hat{y}_0=\hat{f}(x_0)$
+
+- Measure of prediction error:
+
+  $$E[(Y-\hat{Y})^2]= E[(f(X)-\hat{f}(X))^2]+var(\epsilon)$$
+
+## Assessing model Accuracy
+
+- $var(\epsilon)$ is called the irreducible error. Perhaps we need more predictors
+
+- The bias-variance trade-Off
+
+\begin{eqnarray*}
+    E[(f(X)-\hat{f}(X))^2] &=&E[(f(X)-E[\hat{f}(X)]+E[\hat{f}(X)]\hat{f}(X))^2]\\
+    &=&(E[\hat{f}(X)]-f(X))^2+var(\hat{f}(X))\\
+    &=& [bias(\hat{f}(X))]^2+ var(\hat{f}(X))
+ \end{eqnarray*}
+
+## Assessing model Accuracy
+
+- Training Mean Square Error (MSE)
+
+  In regression setting, the most commonly used quality-of-fit measure is MSE, defined as
+  $$MSE= \frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{f}(x_i))^2$$
+  However, we are interested in the accuracy of predictions that we obtain when we apply our method to previously unseen data. 
+
+## Assessing model Accuracy
+
+- Testing Mean Square Error (MSE)
+
+  
+  $$\text{Testing } MSE= E [Y_0-\hat{f}(X_0)]^2$$
+
+## Assessing model Accuracy
+
+- The Classification setting
+
+    + training error rate: 
+    
+    $$\frac{1}{n}\sum_{i=1}^{n}(I(y_i\ne \hat{y}_i))$$
+    
+    + testing error rate
+    
+     $$E(I(Y_0 \ne \hat{Y}_0))$$

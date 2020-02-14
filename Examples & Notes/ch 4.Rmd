@@ -1,0 +1,590 @@
+---
+title: "Classification"
+subtitle: "Chapter 4"
+Author: "SS3850G"
+date: "January 2020"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+
+
+## Classification Intro
+
+-  Classification by Sepal Width
+
+```{r}
+library(ggplot2)
+head(iris)
+hist_s_w <- ggplot(data=iris, aes(x=Sepal.Width))
+hist_s_w + geom_histogram(binwidth=0.2, color="black", aes(fill=Species)) + 
+  xlab("Sepal Width") +  ylab("Frequency") + ggtitle("Histogram of Sepal Width")
+
+den_s_w <- ggplot(data=iris, aes(x=Sepal.Width, fill=Species))
+den_s_w + geom_density(stat="density", alpha=I(0.2)) +
+  xlab("Sepal Width") +  ylab("Density") + ggtitle("Histogram & Density Curve of Sepal Width")
+```
+
+## Classification Intro
+
+
+## width and length
+
+```{r}
+ ggplot(data=iris, aes(x=Sepal.Length, y=Sepal.Width, color=Species)) + 
+  geom_point(aes(shape=Species), size=1.5) + xlab("Sepal Length") + ylab("Sepal Width") + 
+  ggtitle("Scatterplot ")
+```
+
+
+## Classification Intro
+
+- data: 
+
+    +$(x_i,y_i)$, $x_i=(x_{i1},\cdots, x_{ip})$
+
+    +$y_i$  is categorical, can take values $\mathcal{C}_k, k=1, ..., K$
+     + classification: given x, determine $\hat{y}$
+
+-  Model
+
+    + Objects are divided into K categories $\mathcal{C}_k, k=1, ..., K$
+    + Prior probability $P(y=\mathcal{C}_k)$
+    + Conditional probability $P(x|y=\mathcal{C}_k)$
+    + Decision region: $\hat{y}=\mathcal{R}(x)=1,\cdots, K$
+
+- Accuracy
+
+    + training error rate: 
+    
+    $$\frac{1}{n}\sum_{i=1}^{n}(I(y_i\ne \hat{y}_i))$$
+    
+    + testing error rate
+    
+     $$E(I(Y \ne \hat{Y}))$$
+
+
+## Classification Intro
+    
+- Bayesian decision bounary
+
+    + the posterior probability
+    $$P(\mathcal{C}_k|x)=\frac{P(x|\mathcal{C}_k)P(\mathcal{C}_k)}{P(x)}$$
+    + Bayesian decision: $\mathcal{R}(x)=k$ if $P(\mathcal{C}_k|x) > P(\mathcal{C}_j|x)$ for $j\ne k$
+    + Bayesian decision: assign an object to class $\mathcal{C}_k$ for which the posterior probability $P(\mathcal{C}_k|x)$ is largest. 
+    + Bayesian error rate: 
+    $$1- E(\max_k P(\mathcal{C}_k|X))$$
+    + Theorem: Bayesian classifier has the lowest possible test error rate
+    
+## Logistic Regression
+
+- data: $(x_i,y_i)$, $x_i=(x_{i1},\cdots, x_{ip})$
+
+- $y_i$  is categorical 
+
+- Assumption: $Y$ follows a Bernoulli distribution $Pr(y_i=1|x_i)=p_i$ is a function of  $x_i=(x_{i1},\cdots, x_{ip})$.
+
+- a Bernoulli rv $Y_i$ has probability mass function $f(y_i)=P(Y_i=y_i)=p_i^{y_i} (1-p_i)^{1-y_i}$, where $y_i=0,1$.
+
+- We could assume that $p_i$ to be an unknown  function of $x_i$
+ 
+    + For example, one can try $p_i=\beta_0 +\beta_1 x_{i1}+\cdots+\beta_1 x_{ip}=x_i^T \beta$
+    + However, this linear function has its problem
+
+## Logistic Regression
+
+- Logistic Model: $$p_i=E(y_i)=\frac{\exp (x_i^T \beta)}{1+\exp (x_i^T \beta)}$$
+
+
+- log odds (logit) $$log\left(\frac{p_i}{1-p_i}\right)=x_i^T \beta$$
+
+- Keeping everything else the same, one unit increase in $x_{j}$ results in $\beta_j$ unit change in log odds. Equivalently, it multiplies the odds by $e^{\hat{\beta}_j}$.
+
+- the amount that $p_i$ changes due to one unit change of a predictor depends on the current value of the predictor. 
+
+## shape of logistic function
+
+```{r}
+n=50;
+x<-rnorm(n,0,2);
+pi_x<-exp(2+3*x)/(1+exp(2+3*x))
+plot(x,pi_x)
+plot(x,pnorm(x))
+```
+
+
+
+
+## Logistic Regression
+
+- Logistic Model: $$p_i=E(y_i)=\frac{\exp (x_i^T \beta)}{1+\exp (x_i^T \beta)}$$
+
+- The likelihood function is $$L(\beta, y_i,\ldots, y_n)=\prod_{i=1}^{n} p_i^{y_i} (1-p_i)^{1-y_i}$$
+
+- by maximizing the likelihood function we may numerically find the estimates of $\beta$, $\hat{\beta}$.
+
+## Logistic Regression
+
+- Examples: iris data
+- change the response variable into two categories
+
+```{r}
+library(ggplot2)
+head(iris)
+my.iris<-iris
+# select y to be setosa
+
+my.iris$y<-iris$Species=="setosa"
+my.iris$y<-as.factor(my.iris$y)
+levels(my.iris$y)<-c("others", "Setosa")
+my.iris$Species<-NULL
+head(my.iris)
+```
+
+##  Logistic Regression
+
+```{r}
+#my.iris<-iris[iris$Species!="virginica",]
+#droplevels(my.iris)
+glmfit1<- glm(y~ Sepal.Width, data=my.iris, family = binomial)
+summary(glmfit1)
+prob.predict<-predict(glmfit1, type="response")
+c.predict<-rep("other", length(my.iris$y))
+c.predict[prob.predict>0.5]<-"setosa"
+t1<-table("original"=my.iris$y, "predicted"=c.predict)
+t1
+
+p.t1<-prop.table(t1,1)
+
+t1.mar<-addmargins(t1)
+(t1.mar)
+
+library(knitr)
+
+
+kable(as.data.frame(t1))
+```
+
+	
+	
+##  Logistic Regression
+
+-  four predictors
+
+```{r}
+glmfit2<- glm(y~., data=my.iris, family = binomial)
+summary(glmfit2)
+prob.predict2<-predict(glmfit2, type="response")
+c.predict2<-rep("other", length(my.iris$y))
+c.predict2[prob.predict2>0.5]<-"setosa"
+t2<-table(my.iris$y, c.predict2)
+t2
+```
+
+## Default example
+
+
+```{r}
+library(ggplot2)
+require(ISLR)
+#View(Default)
+attach(Default)
+qplot(balance, default)
+qplot(balance, fill=default)
+qplot(balance,data=Default, facets =.~ default)
+qplot(balance,data=Default, facets =default~.)
+qplot(default, balance, geom ="boxplot")
+qplot(default, balance, geom ="jitter")
+qplot(student, balance, geom ="boxplot")
+qplot(balance, income, color= default)
+detach(Default)
+```
+
+## Default example
+
+```{r}
+Default<-na.omit(Default)
+c_fit1<-glm(default~balance, data=Default, family = binomial)
+summary(c_fit1)
+coef(c_fit1)
+prob_pre1<-predict(c_fit1, type="response")
+hist(prob_pre1)
+default.predict<-rep("No", length(Default$default))
+default.predict[prob_pre1>0.5]<-"Yes"
+t1<-table("original"=Default$defaul, "predicted"=default.predict)
+t1
+
+```
+
+## Default example
+
+- training error
+
+```{r}
+accuracy<-mean(default.predict==Default$default)
+```
+
+
+
+-  nothing too happy about the result
+
+    + 
+```{r}
+table(Default$default)
+```
+
+## Default example
+
+- decision boundary
+
+$$\frac{\exp (x_i^T \beta)}{1+\exp (x_i^T \beta)}>0.5$$
+
+## Default example
+
+-  Interpretation of the results
+
+```{r}
+c_fit1<-glm(default~student, data=Default, family = binomial)
+summary(c_fit1)
+coef(c_fit1)
+```
+
+```{r}
+c_fit2<-glm(default~student+income+balance, data=Default, family = binomial)
+summary(c_fit2)
+coef(c_fit2)
+```
+
+##  Confusion Matrix
+
+| | |Prediction Prediction|Total| 
+|------------- | :-----------:|:-------------:|:----------:|-------------:|
+| | | N | P | Total|
+|True status| N | TN |FP|N|
+|True status| P | FN |TP|P|
+| | Total | $N^*$| $P^*$| T|
+
+	- Sensitivity (TP/P):power, 1-type II error, true positive rate
+	
+	- Specificity: (TN/N=1-FP/N) 1-type I error
+	
+	- Precision: TP/P*
+	
+	- Accuracy:(TP+TN)/(P+N)
+
+## Default example
+
+-  Confusion Matrix
+
+```{r}
+c_fit2<-glm(default~student+income+balance, data=Default, family = binomial)
+c_pre2<-predict(c_fit2, type="response")
+default_pred2<-rep("No", length(Default$default))
+default_pred2[c_pre2>0.5]="Yes"
+t1<-table(Default$default,default_pred2)
+p_t1<-prop.table(t1,1)
+p_t2<-prop.table(t1,2)
+t1
+p_t1
+p_t2
+sensitivity<-p_t1[2,2]
+specificity<-p_t1[1,1]
+precision<-p_t2[2,2]
+accuracy<-mean(default_pred2==Default$default)
+accu1<-c("accuracy"=accuracy, "Sensitivity"=sensitivity, "specificity"=specificity, "precision"=precision)
+accu1
+```
+
+## Default example
+
+-  Confusion Matrix
+
+    + You were asked to increase sensitivity
+```{r}
+library(ISLR)
+c_fit2<-glm(default~student+income+balance, data=Default, family = binomial)
+c_pre2<-predict(c_fit2, type="response")
+default_pred3<-rep("No", length(Default$default))
+default_pred3[c_pre2>0.2]="Yes"
+t2<-table(Default$default, default_pred3)
+accuracy<-mean(default_pred3==Default$default)
+mean(Default$default=="No")
+p_t1<-prop.table(t2,1)
+p_t2<-prop.table(t2,2)
+t2
+p_t1
+p_t2
+sensitivity<-p_t1[2,2]
+specificity<-p_t1[1,1]
+precision<-p_t2[2,2]
+accu2<-c("accuracy"=accuracy, "Sensitivity"=sensitivity, "specificity"=specificity, "precision"=precision)
+```
+## Default example
+
+- ROC curve
+
+    + FP rate vS TP (1-specificity VS Sensitivity)
+```{r}
+v_accuracy<-c();
+v_sensitivity<-c();
+v_specificity<-c();
+for (j in 0:999)
+{
+  default_pred<-rep("No", length(Default$default))
+  default_pred[c_pre2>.9991-(j/1000)]="Yes"
+  v_accuracy<-c(v_accuracy,mean(default_pred==Default$default))  
+  tt<-table(Default$default,default_pred)
+  p_tt1<-prop.table(tt,1)
+  p_tt2<-prop.table(tt,2)
+  if (dim(tt)[2]==1)
+  {sensitivity<-0
+  specificity<-1
+  }
+  else
+  {sensitivity<-p_tt1[2,2]
+  specificity<-p_tt1[1,1]
+  }
+  v_sensitivity<-c(v_sensitivity,sensitivity)
+  v_specificity<-c(v_specificity,specificity)
+}
+thre<-(999:0)/1000
+#v_accuracy;
+#v_sensitivity;
+#v_specificity;
+plot(thre, v_accuracy)
+plot(thre, v_sensitivity)
+plot(1-v_specificity,v_sensitivity)
+plot(1-v_specificity,1-v_sensitivity, xlab = "type II error", ylab = "type I error")
+
+title("ROC Curve")
+
+```
+
+
+## Default example
+
+- You should google ROC curve and confusion matrix
+
+- ROC can be used to determined the best classification boundary
+
+- ROC can be used to compare models.  Large (AUC) is good. 
+
+## Linear Discriminant Analysis (LDA)
+
+- $p=1$
+
+- In classification, we try to find
+$$p_k(x)\equiv P(Y=k|X=x)=\frac{\pi_k f_k(x)}{\sum_{l=1}^{K}\pi_l f_l(x)}$$
+
+-  Bayes classifier: $\hat{Y}=k$ if $$P(Y=k|X=x)>P(Y=j|X=x)$$ for all $j\ne k$
+-  $\hat{Y}=k$ if $$\pi_k f_k(x)>\pi_j f_j(x)$$
+
+## Linear Discriminant Analysis (LDA)
+
+- $p=1$
+
+- Assume that $f_k(x)$ is normal with mean $\mu_k$ and standard deviation $\sigma$.  
+
+- Then $$p_k(x)=\frac{\pi_k \frac{1}{\sqrt{2\pi} \sigma}\exp (-(x-\mu_k)^2/2\sigma^2)}{\sum_{l=1}^{K}\pi_l  \frac{1}{\sqrt{2\pi} \sigma}\exp (-(x-\mu_l)^2/2\sigma^2)}$$
+
+- The discriminat function is $$\delta_k(x)=x\frac{\mu_k}{\sigma^2}-\frac{\mu_k^2}{2\sigma^2}+\log{\pi_k}$$
+
+## Quadratic Discriminant Analysis (QDA)
+
+- $p=1$
+
+- Assume that $f_k(x)$ is normal with mean $\mu_k$ and standard deviation $\sigma$.  
+
+- Then $$p_k(x)=\frac{\pi_k \frac{1}{\sqrt{2\pi} \sigma_k}\exp (-(x-\mu_k)^2/2\sigma_k^2)}{\sum_{l=1}^{K}\pi_l  \frac{1}{\sqrt{2\pi} \sigma}\exp (-(x-\mu_l)^2/2\sigma_k^2)}$$
+
+- The discriminat function is $$\delta_k(x)=-\frac{x^2}{2\sigma_k^2}+x\frac{\mu_k}{\sigma_k^2}-\frac{\mu_k^2}{2\sigma_k^2}+\log{\pi_k}$$
+
+
+
+## Linear Discriminant Analysis (LDA)
+
+- One need to estimate $\pi_k$, $\mu_k$ and $\sigma^2$
+
+- $$\hat{\mu}_k=\frac{1}{n_k}\sum_{i: y_i=k} x_i$$
+
+- $$\hat{\sigma}^2=\frac{1}{n-K}\sum_{k=1}^K \sum_{i: y_i=k} (x_i-\hat{\mu}_k)^2 $$
+
+- $$\hat{\pi}_k=n_k/n$$
+
+## Relationship between LDA and Logistic regression
+
+- If $f_k(x)$ is normal, then
+
+$$\log \frac{p_1(x)}{p_0(x)}=c_0+c_1 x$$
+
+## Linear Discriminant Analysis (LDA)
+
+- $p>1$
+
+- given $Y=k$, $X$ is normal with mean vector $\mu_k$ and covariance matrix $\Sigma$.  
+
+- $$f(x|k)=\frac{1}{(2\pi)^{p/2} }\exp(-\frac{1}{2}(x-\mu_k)^\top \Sigma^{-1}(x-\mu_k))$$
+
+- $$\delta_k(x)=x^T \Sigma^{-1}\mu_k-\frac{1}{2}\mu_k^T \Sigma^{-1}\mu_k$$
+
+## Quadratic Discriminant Analysis (QDA)
+
+- $p>1$
+
+- 	$K=k, p>1$, given $Y=k$, $X$ is normal with mean vector $\mu_k$ and covariance matrix $\Sigma_k$.
+
+- $$\delta_k(x)=-\frac{1}{2}x^T \Sigma_k^{-1}x + x^T \Sigma_k^{-1}\mu_k-\frac{1}{2}\mu_k^T \Sigma_k^{-1}\mu_k-\frac{1}{2} \log |\Sigma_k|+ \log \pi_k$$
+
+
+## LDA and QDA
+
+- variance-bias trade off	
+
+    + LDA:	with $p$ predictors and $K$ classes, the covariance matrix has $p(p+1)/2$ parameters
+    + QDA:	with $p$ predictors and $K$ classes, the covariance matrix has $K p(p+1)/2$ parameters
+    + LDA discriminant is a linear function of the predictors,  QDA discriminant is a quadratic function of the predictors.
+
+## Naive Bayesian
+
+- assume that $x_i$, $i=1, \cdots, p$ are independent
+
+## R implementation of LDA and QDA
+
+```{r}
+library(ISLR)
+library(MASS)
+Default<-na.omit(Default)
+
+Default.lda <- lda(default ~ balance+ income, data = Default)
+Default.lda
+pre.Default.lda<- predict(Default.lda)
+names(pre.Default.lda)
+
+ldahist(pre.Default.lda$x, g = Default$default)
+
+table(Default$default, pre.Default.lda$class)
+
+my.lda.pre<-rep("No", length(Default$default))
+my.lda.pre[pre.Default.lda$posterior[, "Yes"] >0.2]<-"Yes"
+
+table(Default$default, my.lda.pre)
+
+```
+
+## R implementation of LDA and QDA
+
+- Use training and test set
+
+```{r}
+n<-length(Default$default)
+train_n<-sample(1:n, floor(n/2))
+train_D<-Default[train_n,]
+test_D<-Default[-train_n,]
+
+lda.train <- lda(default ~ balance+ income, data = train_D)
+
+#test error
+pre.D.lda<- predict(lda.train, test_D)
+t1<-table(test_D$default, pre.D.lda$class)
+prop.table(t1,1)
+
+#train error
+pre.D.lda<- predict(lda.train, train_D)
+t1<-table(train_D$default, pre.D.lda$class)
+prop.table(t1,1)
+
+```
+## R implementation of LDA and QDA
+
+- Use training and test set
+
+```{r}
+## qda
+
+qda.train <- qda(default ~ balance+ income, data = train_D)
+
+#qda test error
+pre.D.qda<- predict(qda.train, test_D)
+t1<-table(test_D$default, pre.D.qda$class)
+prop.table(t1,1)
+
+#train error
+pre.D.qda<- predict(qda.train, train_D)
+t1<-table(train_D$default, pre.D.qda$class)
+prop.table(t1,1)
+
+## 
+
+```
+
+- comparison results do depend on how you split data
+
+##  LDA for iris data
+
+```{r}
+library(MASS)
+levels(iris$Species)<- c("vi","v","s")
+LDA <- lda(Species ~ ., data = iris)
+ X <- data.frame(predict(LDA)$x)
+plot(LDA)
+LDA.p<-predict(LDA)
+table(iris$Species, "LDA Prediction"=LDA.p$class)
+
+library(ggplot2)
+new.d<-data.frame(ld1=LDA.p$x[,1], ld2=LDA.p$x[,2], type=LDA.p$class)
+ggplot(new.d, aes(x=ld1, y=ld2, colour=type))+geom_point()
+
+```
+
+
+
+
+
+## KNN classification
+
+
+```{r}
+library(class)
+library(ISLR)
+
+Default<- Default[,c("default", "balance", "income")]
+# scale the data
+Default.scale<- scale(Default[,-c(1)])
+
+n<-length(Default$default)
+train_n<-sample(1:n, floor(n/2))
+train_D<-Default.scale[train_n,]
+test_D<-Default.scale[-train_n,]
+train_y<-Default[train_n,"default"]
+test_y<-Default[-train_n,"default"]
+
+knn.pre<-knn(train_D, test_D, train_y, k=5)
+table(test_y, knn.pre)
+
+```
+
+## KNN classification
+
+
+
+- It usually better to scale the predictor first
+
+- use test error to select k 
+
+## Comparison of methods
+
+- variance-bias trade off	
+
+    + LDA:	with $p$ predictors and $K$ classes, the covariance matrix has $p(p+1)/2$ parameters
+    + QDA:	with $p$ predictors and $K$ classes, the covariance matrix has $K p(p+1)/2$ parameters
+    + LDA discriminant is a linear function of the predictors,  QDA discriminant is a quadratic function of the predictors.
+
+- Assumptions: 
+    + LDA and QDA: normal predictors
+    + KNN nonparametric
+
+- Use testing error to compare
+
+- Section 4.5 of the textbook
+
+

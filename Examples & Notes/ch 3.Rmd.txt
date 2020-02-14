@@ -1,0 +1,261 @@
+---
+title: "Linear Regression"
+subtitle: "Chapter 3"
+Author: "SS3850G"
+date: "January 2020"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+
+
+## Example of simple regression
+
+
+```{r}
+library(knitr)
+Advertising <- read.csv("Advertising.csv")
+fit_a<-lm(sales~ newspaper, data=Advertising)
+summary(fit_a)
+```
+
+## Simulation Example
+
+
+```{r}
+n=20;
+x<-rnorm(n);
+y<-2+3*x+rnorm(n,0,2)
+fit_1<-lm(y~x)
+summary(fit_1)
+```
+
+## Recovering the standard deviation of beta
+
+```{r}
+b=c();
+for (j in 1:500)
+{
+  # x<-rnorm(20);
+  y<-2+3*x+rnorm(n,0,2)
+  fit_t<-lm(y~x)
+  b<-c(b,coef(fit_t)[2])
+}
+mb<-mean(b)
+mb
+vb<-var(b)
+(sqrt(vb))
+```
+
+
+## p-value
+```{r}
+t1<-summary(fit_1)$coefficients[2,3]
+pt(t1,n-2, lower.tail=F)*2
+```
+
+
+
+-  Practice  Question 1: Numerically evaluate the covariance matrix of the coefficient
+
+-  Practice  Question 2: Evaluate the p-vlaue numerically
+
+- training and testing MSE
+
+
+```{r}
+train.mse<- mean(residuals(fit_1)^2)
+```
+
+
+-  tesing MSE
+
+ generate new data
+ 
+ ```{r}
+xt<-rnorm(100);
+yt<-2+3*x+rnorm(n,0,2)
+pre_y<-predict(fit_1, newdata = data.frame(x=xt))
+test.mse<- mean((pre_y-yt)^2)
+```
+
+## Testing and Training example
+
+```{r}
+n=50;
+set.seed(1)
+x<-rnorm(n,1,1);
+y<-1+ x + 2* sin(x)+rnorm(n, 0, 1)
+
+plot(x,y)
+
+fit_1<-lm(y~x)
+fit_2<-lm(y~poly(x,2))
+fit_3<-lm(y~poly(x,3))
+fit_4<-lm(y~poly(x,4))
+fit_5<-lm(y~poly(x,5))
+fit_6<-lm(y~poly(x,6))
+fit_7<-lm(y~poly(x,7))
+fit_8<-lm(y~poly(x,8))
+fit_9<-lm(y~poly(x,9))
+fit_10<-lm(y~poly(x,10))
+
+
+training_e1<-mean(residuals(fit_1)^2)
+training_e2<-mean(residuals(fit_2)^2)
+training_e3<-mean(residuals(fit_3)^2)
+training_e4<-mean(residuals(fit_4)^2)
+training_e5<-mean(residuals(fit_5)^2)
+training_e6<-mean(residuals(fit_6)^2)
+training_e7<-mean(residuals(fit_7)^2)
+training_e8<-mean(residuals(fit_8)^2)
+training_e9<-mean(residuals(fit_9)^2)
+training_e10<-mean(residuals(fit_10)^2)
+
+training_e<-c(training_e1,training_e2,training_e3,training_e4,training_e5,training_e6,training_e7,training_e8,training_e9,training_e10)
+training_e
+
+
+n=50;
+x1t<- rnorm(n,1,1);
+yt<- 1+ x1t + 2* sin(x1t)+rnorm(n, 0, 1)
+
+ndata_1<-data.frame(x=x1t)
+pre_1<-predict(fit_1, ndata_1)
+pre_2<-predict(fit_2, ndata_1)
+pre_3<-predict(fit_3, ndata_1)
+pre_4<-predict(fit_4, ndata_1)
+pre_5<-predict(fit_5, ndata_1)
+pre_6<-predict(fit_6, ndata_1)
+pre_7<-predict(fit_7, ndata_1)
+pre_8<-predict(fit_8, ndata_1)
+pre_9<-predict(fit_9, ndata_1)
+pre_10<-predict(fit_10, ndata_1)
+
+testing_e1<-mean((yt-pre_1)^2)
+testing_e2<-mean((yt-pre_2)^2)
+testing_e3<-mean((yt-pre_3)^2)
+testing_e4<-mean((yt-pre_4)^2)
+testing_e5<-mean((yt-pre_5)^2)
+testing_e6<-mean((yt-pre_6)^2)
+testing_e7<-mean((yt-pre_7)^2)
+testing_e8<-mean((yt-pre_8)^2)
+testing_e9<-mean((yt-pre_9)^2)
+testing_e10<-mean((yt-pre_10)^2)
+
+testing_e<-c(testing_e1,testing_e2,testing_e3,testing_e4,testing_e5,testing_e6,testing_e7,testing_e8,testing_e9,testing_e10)
+testing_e
+```
+
+## Multiple Linear Regression
+
+-  Interpretation of the regression coefficients
+
+```{r}
+library(knitr)
+Advertising <- read.csv("Advertising.csv")
+fit_a<-lm(sales~ newspaper, data=Advertising)
+kable(coef(summary(fit_a)))
+
+fit_b<-lm(sales~ newspaper+TV+radio, data=Advertising)
+kable(coef(summary(fit_b)))
+```
+
+-  How to explain with the coeffient of newspaper change?
+
+
+## Multiple Linear Regression
+
+-  Prediction
+
+```{r}
+fit_b<-lm(sales~ newspaper+TV+radio, data=Advertising)
+predict(fit_b, data.frame(newspaper = 80, TV= 100, radio= 50), interval = "confidence")
+
+predict(fit_b, data.frame(newspaper = 80, TV= 100, radio= 50), interval = "predict")
+
+```
+
+
+
+## Multiple Linear Regression
+
+-   Qualitative predictors
+
+```{r}
+Credit <- read.csv("Credit.csv")
+m1<-lm(Rating~ Student, data = Credit)
+kable(coef(summary(m1)))
+
+m2<-lm(Rating~ Balance +Student, data = Credit)
+kable(coef(summary(m2)))
+
+m3<-lm(Rating ~ Balance +Student+Balance:Student, data = Credit)
+kable(coef(summary(m3)))
+```
+
+## Step functions
+
+```{r}
+Advertising<- read.csv("Advertising.csv")
+plot(Advertising$TV, Advertising$sales)
+sections <-cut(Advertising$TV, breaks = c(0,35,Inf))
+Advertising$TV.sec <-sections
+fit_x<-lm(sales~ TV.sec*TV, data= Advertising)
+
+```
+Question: how can you make the fitted line continuous?
+
+
+
+## Multiple Linear Regression
+
+Considerations
+
+-    Outliners: residual plot
+
+-    Influential Points:$H_{ii}$
+
+```{r}
+plot(fit_b)
+hatvalues(fit_b)
+```
+
+## PRESS statistics
+
+-   PRESS residual : $e_{(i)}=y_i-\hat{y}_{(i)}$
+
+-  High PRESS indicate high influence
+
+-  PRESS sum of square
+
+$$PRESS=\sum_{i=1}^{n}[y_i-\hat{y}_{(i)}]^2=\sum_{i=1}^{n} \frac{e_i}{1-H_{ii}}$$
+
+     
+## Multicolinearity
+
+
+-  increase variance of the coefficents
+
+-  The VIF is the ratio of the variance of $\hat{\beta}_j$ when fitting the full model devided by the variance of $\hat{\beta}_j$ if fit on its own.
+
+-  VIF can be computed by 
+
+$$VIF(\hat{\beta}_j)=\frac{1}{1-R^2_{X_j|X_{-j}}}$$
+
+
+## The Marketing Plan
+
+1. Is there a relationship between advertising sales and budget?
+
+2. How strong is the relationship?
+
+3. Which media contribute to sales?
+
+4. How large is the effect of each medium on sales?
+
+5. How accurately can we predict future sales?
+
+6. Is the relationship linear?
+
+7. Is there synergy (interaction) among the advertising media?
