@@ -1,6 +1,6 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output: pdf_document
 ---
 
 
@@ -133,7 +133,7 @@ auto$mpg01 <-
          1,
          0
   )
-auto
+summary(auto)
 ```
 
 
