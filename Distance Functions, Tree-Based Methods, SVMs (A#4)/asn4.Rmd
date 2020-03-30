@@ -1,0 +1,251 @@
+---
+title: "Assignment #4 - SS3850"
+output: pdf_document
+author: Hussien Hussien
+---
+
+```{r}
+set.seed(1)
+suppressMessages(library(MASS))
+suppressMessages(library(ISLR))
+suppressMessages(attach(Boston))
+suppressMessages(attach(OJ))
+suppressMessages(library(boot))
+suppressMessages(library(splines))
+suppressMessages(library(tree))
+suppressMessages(library('topicmodels'))
+suppressMessages(library(caret))
+
+```
+
+## Chapter 7 Q9
+This question uses the variables dis (the weighted mean of distances to five Boston employment centers) and nox (nitrogen oxides concen- tration in parts per 10 million) from the Boston data. We will treat `dis` as the predictor and `nox` as the response.
+
+
+(a) Use the poly() function to fit a cubic polynomial regression to predict nox using dis. Report the regression output, and plot the resulting data and polynomial fits.
+```{r}
+# TRain model and show regression output
+linear.fit = lm(nox ~ poly(dis, 3), data = Boston)
+summary(linear.fit)
+
+# Set X for plotting
+dislim = range(dis)
+dis.grid = seq(from = dislim[1], to = dislim[2], by = 0.1)
+
+# Predict and plot predictions
+linear.pred = predict(linear.fit, newdata=list(dis = dis.grid))
+plot(nox ~ dis, data = Boston, col = "lightblue")
+lines(dis.grid, linear.pred, col = "red", lwd = 1)
+```
+
+
+(b) Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
+```{r}
+rss.error = rep(0, 10)
+for (i in 1:10) {
+    linear.fit = lm(nox ~ poly(dis, i), data = Boston)
+    rss.error[i] = sum(linear.fit$residuals^2)
+}
+rss.error
+
+plot(1:10, rss.error, xlab = "Degree", ylab = "RSS error", type = "l", pch = 20, 
+    lwd = 2, col = "blue")
+```
+
+
+(c) Perform cross-validation or another approach to select the optimal degree for the polynomial, and explain your results.
+```{r}
+
+cv.error = rep(0, 10)
+for (i in 1:10) {
+    glm.fit = glm(nox ~ poly(dis, i), data = Boston)
+    cv.error[i] = cv.glm(Boston, glm.fit, K = 10)$delta[2]
+}
+plot(1:10, cv.error, xlab = "Degree", ylab = "CV error", type = "l", pch = 20, 
+    lwd = 2,col = 'green')
+```
+Three looks like the optimal polynomial degree.
+
+(d) Use the bs() function to fit a regression spline to predict nox using dis. Report the output for the fit using four degrees of freedom. How did you choose the knots? Plot the resulting fit.
+```{r}
+# Fit regression spline and output summary.. Since dis has a range of about 1-13 we'll try to pick splines that can spit this range into 4 even quantiles
+spline.fit = lm(nox ~ bs(dis, df = 4, knots = c(4, 7, 10)), data = Boston)
+summary(spline.fit)
+
+# Predict using regression spline and plot over data
+spline.pred = predict(spline.fit, newdata=list(dis = dis.grid))
+plot(nox ~ dis, data = Boston, col = "lightblue")
+lines(dis.grid, spline.pred, col = "red", lwd = 2)
+```
+
+
+(e) Now fit a regression spline for a range of degrees of freedom, and plot the resulting fits and report the resulting RSS. Describe the results obtained.
+```{r}
+spline.rss = rep(0, 16)
+for (i in 3:16) {
+    spline.fit = lm(nox ~ bs(dis, df = i), data = Boston)
+    spline.rss[i] = sum(spline.fit$residuals^2)
+}
+spline.rss[-c(1, 2)]
+
+plot(3:16, spline.rss[-c(1, 2)], xlab = "Degree", ylab = "CV RSS", type = "l", pch = 20, 
+    lwd = 2,col = 'green')
+
+```
+It looks like the results keep getting better until we hit degree=13 then experience a gradualy increase in RSS... It appears that 13 has the best training RSS but probably overfit.
+
+(f) Perform cross-validation or another approach in order to select the best degrees of freedom for a regression spline on this data. Describe your results.
+```{r}
+spline.cverror = rep(0, 16)
+for (i in 3:16) {
+    spline.fit = glm(nox ~ bs(dis, df = i), data = Boston)
+    spline.cverror[i] = cv.glm(Boston, spline.fit, K = 10)$delta[1]
+}
+plot(3:16, spline.cverror[-c(1, 2)], lwd = 2, type = "l", xlab = "df", ylab = "CV error")
+```
+The data looks alot less monotonic than the above CV graphs. It does appear that there is a clear minimum at DF=10.
+
+## Chapter 8 Q9
+
+This problem involves the OJ data set which is part of the ISLR package.
+(a) Create a training set containing a random sample of 800 obser- vations, and a test set containing the remaining observations.
+```{r}
+set.seed(1013)
+
+train = sample(dim(OJ)[1], 800)
+OJ.train = OJ[train, ]
+OJ.test = OJ[-train, ]
+```
+
+
+(b) Fit a tree to the training data, with Purchase as the response and the other variables as predictors. Use the summary() function to produce summary statistics about the tree, and describe the results obtained. What is the training error rate? How many terminal nodes does the tree have?
+```{r}
+
+tree.model = tree(Purchase ~ ., data = OJ.train)
+summary(tree.model)
+```
+It has 7 terminal nodes. 
+Training error rate (misclassification error) for the tree is 0.1612.
+
+(c) Type in the name of the tree object in order to get a detailed text output. Pick one of the terminal nodes, and interpret the information displayed.
+```{r}
+tree.model
+```
+
+
+(d) Create a plot of the tree, and interpret the results.
+```{r}
+plot(tree.model); text(tree.model)
+```
+Since LoyalCH splits the tree the most, we can say that it is the most important feature. This alone could perform a classification but in the case that it doesn't we observe and split at either PriceDiff or ListPriceDiff.. If ListPriceDiff is below 0.235 then we consult SalePriceMM.
+
+(e) Predict the response on the test data, and produce a confusion matrix comparing the test labels to the predicted test labels. What is the test error rate?
+```{r}
+tree.pred = predict(tree.model, OJ.test, type = "class")
+
+confusionMatrix(tree.pred, reference = OJ.test$Purchase)
+```
+Error rate (1-accuracy): 1 - 0.8333 = 0.167
+
+(f) Apply the cv.tree() function to the training set in order to determine the optimal tree size.
+```{r}
+tree.cv = cv.tree(tree.model, FUN = prune.tree)
+```
+
+
+(g) Produce a plot with tree size on the x-axis and cross-validated classification error rate on the y-axis.
+```{r}
+plot(tree.cv$size, tree.cv$dev, type = "l", xlab = "Tree Size", ylab = "CV Classification Error",col='green' )
+```
+
+
+(h) Which tree size corresponds to the lowest cross-validated classi- fication error rate?
+
+It looks like this tree reaches a low point in CV classification error at a tree size of 6.
+
+(i) Produce a pruned tree corresponding to the optimal tree size obtained using cross-validation. If cross-validation does not lead to selection of a pruned tree, then create a pruned tree with five terminal nodes.
+```{r}
+tree.pruned = prune.tree(tree.model, best = 6)
+```
+
+
+(j) Compare the training error rates between the pruned and unpruned trees. Which is higher?
+```{r}
+summary(tree.pruned)
+```
+The training error rate of the non-pruned tree: 0.1612
+The training error rate of the pruned tree: 0.175
+Difference: 0.0138 increase in training error rate
+
+(k) Compare the test error rates between the pruned and unpruned trees. Which is higher?
+```{r}
+unpruned.prediction = predict(tree.model, OJ.test, type = "class") #Make Prediction
+unpruned.errors = sum(OJ.test$Purchase != unpruned.prediction) # Count Errors
+print("Unpruned Test Error Rate")
+unpruned.errors/length(unpruned.prediction) # Compute test error rate
+
+pruned.prediction = predict(tree.pruned, OJ.test, type = "class") #Make Prediction
+pruned.errors = sum(OJ.test$Purchase != pruned.prediction) # Count Errors
+print("Pruned Test Error Rate")
+pruned.errors/length(pruned.prediction) # Compute 
+```
+The Pruned Tree has a higher test and training error rate.
+
+# Chapter 10
+Conduct K-mean and Hierarchical clustering on the wine data set (attached) or any other dataset you like.
+```{r}
+library(tidyverse) 
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+library(MASS)
+```
+
+##K-mean
+
+```{r}
+wine <- read.delim("wine.txt", sep = ",", dec = ".", header = FALSE) #Read Data
+wine.scale<-scale(wine[,-1]) #Scale Data
+
+distance <- get_dist(wine.scale) #Get Distances
+
+fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+k3 <- kmeans(wine.scale, centers = 3, nstart = 25)
+str(k3)
+k3$cluster
+fviz_cluster(k3, data = wine.scale)
+
+fviz_nbclust(wine.scale, kmeans, method = "wss")
+```
+
+
+##Hierarchical Clustering
+
+```{r}
+
+wine.scale<-scale(wine[,-1]) #Scale Data
+d <- dist(wine.scale, method = "euclidean") #  Compute Dissimilarity matrix
+
+
+hc1 <- hclust(d, method = "complete" ) # Use Dissimilarity Matric to Hierarchicaly cluster using Complete Linkage
+
+
+plot(hc1, cex = 0.6, hang = -1)# Plot the obtained dendrogram
+
+# Compute with agnes
+hc2 <- agnes(wine.scale, method = "complete")
+
+# Agglomerative coefficient
+hc2$ac
+
+##clustering with Dendrograms
+
+sub_grp <- cutree(hc1, k = 3)
+table(sub_grp)
+
+plot(hc1, cex = 0.6)
+rect.hclust(hc1, k = 3, border = 2:4)
+
+fviz_cluster(list(data = wine.scale, cluster = sub_grp))
+```
+
+
